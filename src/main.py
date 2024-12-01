@@ -2,6 +2,8 @@ import re
 
 EMPTY_BOARD = [["" for _ in range(8)] for _ in range(8)]
 
+PIECES = ['k', 'n', 'b', 'p', 'r', 'q']
+
 WHITE_KING = '♚'
 WHITE_QUEEN = '♛'
 WHITE_BISHOP = '♝'
@@ -63,8 +65,8 @@ def main():
 	while True:
 		turn = "White" if is_white else "Black"
 		print(f"   {turn}'s turn. Please enter your move.\n")
-		user_input: str = input(">> ")
-		if user_input.lower() == 'quit':
+		user_input: str = input(">> ").lower()
+		if user_input == 'quit':
 			print("\n   thanks for playing!")
 			break
 		processed_input = process_input(
@@ -185,7 +187,7 @@ def process_input(
 	queenside_castle_notations = ["0-0-0", "o-o-o", "000", "ooo", "castle queen side", "castle queenside"]
 	try:
 		if re.fullmatch(verbose_notation_regex, user_input):
-			piece = user_input[0].upper()
+			piece = user_input[0]
 
 			start_square = user_input[1:3]
 			start_file = file_to_index(start_square[0])
@@ -202,7 +204,7 @@ def process_input(
 			assert start_square != end_square
 			return (piece, start_file, start_rank, end_file, end_rank)
 		elif re.fullmatch(pawn_regex, user_input):
-			piece = 'P'
+			piece = 'p'
 			start_file = file_to_index(user_input[0])
 			end_file = start_file
 			end_rank = rank_to_index(user_input[1])
@@ -217,19 +219,52 @@ def process_input(
 			start_rank = start_ranks[0]
 			return (piece, start_file, start_rank, end_file, end_rank)
 		elif re.fullmatch(pawn_capture_regex, user_input):
-			piece = 'P'
+			piece = 'p'
 			start_file = file_to_index(user_input[0])
 			end_file = file_to_index(user_input[2])
 			end_rank = rank_to_index(user_input[3])
 			pawn = WHITE_PAWN if is_white else BLACK_PAWN
 			forward = -1 if is_white else 1
-			start_rank = ''
+			start_rank = -1
 			for i in range(1,7):
 				print(f"file={start_file}, rank={i}, end_rank={end_rank} piece={board[i][end_file]}")
 				if board[i][start_file] == pawn and i + forward == end_rank:
 					start_rank = i
-			assert start_rank, f"there are no pawns in that position"
+			assert start_rank >= 0, f"there are no pawns in that position"
 			return (piece, start_file, start_rank, end_file, end_rank)
+		elif re.fullmatch(piece_regex, user_input):
+			#print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
+
+			piece_regex = r"[knqrb][a-h|1-8]?[x]?[a-h][1-8][+#]?"
+			piece = user_input[0]
+			piece_char = get_piece_char(piece, is_white)
+			offset = 0
+			# TODO: add logic to differentiate between ambiguous moves (e.g. Nfxc3, R3e4)
+			if user_input[offset+1] == 'x':
+				offset += 1
+			end_file = file_to_index(user_input[offset+1])
+			end_rank = rank_to_index(user_input[offset+2])
+			start_file = -1
+			start_rank = -1
+			for y, row in enumerate(board):
+				for x, square in enumerate(row):
+					if square == piece_char:
+						if is_valid(board, is_white, piece, x, y, end_file, end_rank, log_error=False):
+							start_file = x
+							start_rank = y
+							break
+			if start_file >= 0 and start_rank >= 0:
+				return (piece, start_file, start_rank, end_file, end_rank)
+			else:
+				return None
+			# todo - pieces
+			return None
+		elif user_input in kingside_castle_notations:
+			# todo castling
+			return None
+		elif user_input in queenside_castle_notations:
+			# todo castling
+			return None
 		else:
 			return None
 	except AssertionError as e:
@@ -250,6 +285,7 @@ def is_valid(
 	start_rank: int,
 	end_file: int,
 	end_rank: int,
+	log_error: bool = True
 ) -> bool:
 	try:
 		#print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
@@ -260,7 +296,7 @@ def is_valid(
 		end_piece = board[end_rank][end_file]
 		assert end_piece not in friendly_pieces, "cannot move there, one of your pieces is in the way"
 		is_end_empty = not end_piece
-		if piece == 'P':
+		if piece == 'p':
 			forward = -1 if is_white else 1
 			is_first_move = start_rank == (6 if is_white else 1)
 			if is_end_empty:
@@ -277,14 +313,14 @@ def is_valid(
 				assert (end_file == start_file + 1 or end_file == start_file - 1), "pawns can only capture diagonally"
 				assert (end_rank == start_rank + forward), "pawns can only move forward"
 				return True
-		elif piece == 'K':
+		elif piece == 'k':
 			assert abs(start_file - end_file) <= 1 and abs(start_rank - end_rank) <= 1, "king can only move one square in any direction"
 			return True
-		elif piece == 'N':
+		elif piece == 'n':
 			assert abs(start_file - end_file) <= 2 and abs(start_rank - end_rank) <= 2, "knights cannot move that far"
 			assert abs(start_file - end_file) + abs(start_rank - end_rank) == 3, "knights must move in an L shape"
 			return True
-		elif piece == 'B':
+		elif piece == 'b':
 			assert abs(start_file - end_file) == abs(start_rank - end_rank), "bishops can only move diagonally"
 			distance = abs(start_file - end_file)
 			direction_horizontal = int((end_file - start_file) / abs(end_file - start_file))
@@ -292,7 +328,7 @@ def is_valid(
 			for i in range(1, distance):
 				assert not board[start_rank + i * direction_vertical][start_file + i * direction_horizontal], "cannot move there, a piece is in the way"
 			return True
-		elif piece == 'R':
+		elif piece == 'r':
 			assert (start_file == end_file and start_rank != end_rank) or (start_rank == end_rank and start_file != end_file), "rooks can only move horizontally or vertically"
 			distance_horizontal = end_file - start_file
 			direction_horizontal = 0 if distance_horizontal == 0 else int(distance_horizontal / abs(end_file - start_file))
@@ -303,7 +339,7 @@ def is_valid(
 				piece = board[start_rank + i * direction_vertical][start_file + i * direction_horizontal]
 				assert not piece, "cannot move there, a piece is in the way"
 			return True
-		elif piece == 'Q':
+		elif piece == 'q':
 			# move like a bishop
 			if abs(start_file - end_file) == abs(start_rank - end_rank):
 				distance = abs(start_file - end_file)
@@ -328,27 +364,29 @@ def is_valid(
 		assert False, "unhandled exception"
 	except AssertionError as e:
 		error_msg = str(e)
-		print(f"   Error - {error_msg if error_msg else 'unknown assertion exception'}")
+		if log_error:
+			print(f"   Error - {error_msg if error_msg else 'unknown assertion exception'}")
 		return False
 	except IndexError as e:
 		error_msg = str(e)
-		print(f"   Error - {error_msg if error_msg else 'unknown index exception'}")
+		if log_error:
+			print(f"   Error - {error_msg if error_msg else 'unknown index exception'}")
 		return False
 
 		
 			
 def get_piece_char(piece: str, is_white: bool) -> str:
-	if piece == 'P':
+	if piece == 'p':
 		return WHITE_PAWN if is_white else BLACK_PAWN
-	elif piece == 'K':
+	elif piece == 'k':
 		return WHITE_KING if is_white else BLACK_KING
-	elif piece == 'N':
+	elif piece == 'n':
 		return WHITE_KNIGHT if is_white else BLACK_KNIGHT
-	elif piece == 'B':
+	elif piece == 'b':
 		return WHITE_BISHOP if is_white else BLACK_BISHOP
-	elif piece == 'R':
+	elif piece == 'r':
 		return WHITE_ROOK if is_white else BLACK_ROOK
-	elif piece == 'Q':
+	elif piece == 'q':
 		return WHITE_QUEEN if is_white else BLACK_QUEEN
 	return piece
 
