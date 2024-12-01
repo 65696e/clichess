@@ -41,11 +41,11 @@ You can also type your moves like this:
 
 Pe2e4
 
-The first character P is the first letter of the piece name (Pawn).
-So to move your Queen, you would use Q.
-Since King and Knight both start with K, use N for Knight.
+The first character 'P' is the first letter of the piece (Pawn).
+So to move your Queen, you would use 'Q'.
+Since King and Knight both start with 'K', use 'N' for Knight.
 
-The next two characters are the starting square, and the last two characters are the ending square.
+The next two characters (e2) are the starting square, and the last two characters (e4) are the ending square.
 
 So, 'Pe2e4' would move your Pawn from E2 to E4.
 
