@@ -16,18 +16,54 @@ BLACK_ROOK = '♖'
 BLACK_PAWN = '♙'
 BLACK_PIECES = [BLACK_KING, BLACK_QUEEN, BLACK_BISHOP, BLACK_KNIGHT, BLACK_ROOK, BLACK_PAWN]
 
+INTRO_MSG = """
+███████████████████████████████████████████████████
+█──▄▄▄█──████▄▄──▄▄█──▄▄▄█──██──█──▄▄▄█──▄▄▄█──▄▄▄█
+█──████──██████──███──████──▄▄──█──▄▄██▄▄▄──█▄▄▄──█
+█▄▄▄▄▄█▄▄▄▄▄█▄▄▄▄▄▄█▄▄▄▄▄█▄▄██▄▄█▄▄▄▄▄█▄▄▄▄▄█▄▄▄▄▄█
+
+Welcome to clichess!
+
+The command-line-interface for chess
+
+How to play:
+
+Each player will take turns typing in their move.
+Your move should be written in chess notation.
+If you don't know chess notation, you can learn it here:
+https://www.chess.com/terms/chess-notation
+
+You can also type your moves like this:
+
+Pe2e4
+
+The first character P is the first letter of the piece name (Pawn).
+So to move your Queen, you would use Q.
+Since King and Knight both start with K, use N for Knight.
+
+The next two characters are the starting square, and the last two characters are the ending square.
+
+So, 'Pe2e4' would move your Pawn from E2 to E4.
+
+Type 'quit' at any time to quit.
+
+Press Enter to start
+"""
+
 
 
 def main():
-	print("welcome to clichess")
-	input("press enter to start")
+	print(INTRO_MSG)
+	input(">> ")
 	is_white: bool = True
 	board: list[list[str]] = starting_board()
 	draw(board)
 	while True:
+		turn = "White" if is_white else "Black"
+		print(f"   {turn}'s turn. Please enter your move.\n")
 		user_input: str = input(">> ")
 		if user_input.lower() == 'quit':
-			print("bye!")
+			print("\n   thanks for playing!")
 			break
 		processed_input = process_input(user_input=user_input)
 		if processed_input:
@@ -47,7 +83,6 @@ def main():
 				draw(board)
 				is_white = not is_white
 				continue
-		print("Please try again")
 
 
 def starting_board():
@@ -99,17 +134,17 @@ def draw(
 	for y_idx, row in enumerate(board):
 		row_num = 8 - y_idx
 		if is_light:
-			output += "  |#####     #####     #####     #####     |  \n"
+			output += "  |█████     █████     █████     █████     |  \n"
 		else:
-			output += "  |     #####     #####     #####     #####|  \n"
+			output += "  |     █████     █████     █████     █████|  \n"
 		for x_idx, piece in enumerate(row):
 			if x_idx == 0:
 				output += f"{row_num} |"
 			if is_light:
 				if piece:
-					output += f"# {piece} #"
+					output += f"█ {piece} █"
 				else:
-					output += "#####"
+					output += "█████"
 				
 			else:
 				if piece:
@@ -123,9 +158,9 @@ def draw(
 		is_last_row = y_idx == 7
 		empty_space = "_____" if is_last_row else "     "
 		if is_light:
-			output += f"  |#####{empty_space}#####{empty_space}#####{empty_space}#####{empty_space}|  \n"
+			output += f"  |█████{empty_space}█████{empty_space}█████{empty_space}█████{empty_space}|  \n"
 		else:
-			output += f"  |{empty_space}#####{empty_space}#####{empty_space}#####{empty_space}#####|  \n"
+			output += f"  |{empty_space}█████{empty_space}█████{empty_space}█████{empty_space}█████|  \n"
 		is_light = not is_light
 	output += "\n     a    b    c    d    e    f    g    h   \n"
 	print(output)
@@ -152,11 +187,11 @@ def process_input(
 		return (piece, start_file, start_rank, end_file, end_rank)
 	except AssertionError as e:
 		error_msg = str(e)
-		print(f"Error - {error_msg if error_msg else 'unknown assertion exception'}")
+		print(f"   Error - {error_msg if error_msg else 'unknown assertion exception'}")
 		return None
 	except IndexError as e:
 		error_msg = str(e)
-		print(f"Error - {error_msg if error_msg else 'unknown index exception'}")
+		print(f"   Error - {error_msg if error_msg else 'unknown index exception'}")
 		return None
 
 
@@ -170,7 +205,7 @@ def is_valid(
 	end_rank: int,
 ) -> bool:
 	try:
-		print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
+		#print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
 		friendly_pieces = WHITE_PIECES if is_white else BLACK_PIECES
 		start_piece = board[start_rank][start_file]
 		assert start_piece, "there is not a piece at your starting square"
@@ -222,14 +257,16 @@ def is_valid(
 				assert not piece, "cannot move there, a piece is in the way"
 			return True
 		elif piece == 'Q':
-			if abs(start_file - end_file) == abs(start_rank - end_rank): # move like a bishop
+			# move like a bishop
+			if abs(start_file - end_file) == abs(start_rank - end_rank):
 				distance = abs(start_file - end_file)
 				direction_horizontal = int((end_file - start_file) / abs(end_file - start_file))
 				direction_vertical = int((end_rank - start_rank) / abs(end_rank - start_rank))
 				for i in range(1, distance):
 					assert not board[start_rank + i * direction_vertical][start_file + i * direction_horizontal], "cannot move there, a piece is in the way"
 				return True
-			elif (start_file == end_file and start_rank != end_rank) or (start_rank == end_rank and start_file != end_file): # move like a rook
+			# move like a rook
+			elif (start_file == end_file and start_rank != end_rank) or (start_rank == end_rank and start_file != end_file):
 				distance_horizontal = end_file - start_file
 				direction_horizontal = 0 if distance_horizontal == 0 else int(distance_horizontal / abs(end_file - start_file))
 				distance_vertical = end_rank - start_rank
@@ -244,11 +281,11 @@ def is_valid(
 		assert False, "unhandled exception"
 	except AssertionError as e:
 		error_msg = str(e)
-		print(f"Error - {error_msg if error_msg else 'unknown assertion exception'}")
+		print(f"   Error - {error_msg if error_msg else 'unknown assertion exception'}")
 		return False
 	except IndexError as e:
 		error_msg = str(e)
-		print(f"Error - {error_msg if error_msg else 'unknown index exception'}")
+		print(f"   Error - {error_msg if error_msg else 'unknown index exception'}")
 		return False
 
 		
