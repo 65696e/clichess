@@ -1,3 +1,5 @@
+import re
+
 EMPTY_BOARD = [["" for _ in range(8)] for _ in range(8)]
 
 WHITE_KING = '♚'
@@ -83,7 +85,8 @@ def main():
 				draw(board)
 				is_white = not is_white
 				continue
-
+		else:
+			print("Could not process")
 
 def starting_board():
 	board = EMPTY_BOARD
@@ -167,7 +170,15 @@ def draw(
 
 def process_input(
 	user_input : str,
-) -> str:
+) -> str | None:
+	verbose_notation_regex = r"[pknqrb][a-h][1-8][a-h][1-8]"
+	pawn_regex = r"[a-h][1-8]"
+	pawn_capture_regex = r"[a-h][x]?[a-h][1-8]?"
+	piece_regex = r"[knqrb][a-h|1-8]?[x]?[a-h][1-8][+#]?"
+	kingside_castle_notations = ["0-0", "o-o", "00", "oo", "castle king side", "castle kingside"]
+	queenside_castle_notations = ["0-0-0", "o-o-o", "000", "ooo", "castle queen side", "castle queenside"]
+	if not re.fullmatch(verbose_notation_regex, user_input):
+		return None
 	try:
 		piece = user_input[0].upper()
 
