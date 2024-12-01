@@ -1,4 +1,8 @@
+from time import sleep
 import re
+
+CASTLE_KINGSIDE_NOTATIONS = ["0-0", "o-o", "00", "oo", "castle king side", "castle kingside"]
+CASTLE_QUEENSIDE_NOTATIONS = ["0-0-0", "o-o-o", "000", "ooo", "castle queen side", "castle queenside"]
 
 EMPTY_BOARD = [["" for _ in range(8)] for _ in range(8)]
 
@@ -54,6 +58,41 @@ Type 'quit' at any time to quit.
 Press Enter to start
 """
 
+TEST_MOVES = [
+	"e4",
+	"e5",
+	"Nf3",
+	"d6",
+	"d4",
+	"Bg4",
+	"dxe5",
+	"Bxf3",
+	"Qxf3",
+	"dxe5",
+	"Bc4",
+	"Nf6",
+	"Qb3",
+	"Qe7",
+	"Nc3",
+	"c6",
+	"Bg5",
+	"b5",
+	"Nxb5",
+	"cxb5",
+	"Bxb5",
+	"Nb8d7",
+	"o-o-o",
+	"Rd8",
+	"Rxd7",
+	"Rxd7",
+	"Rd1",
+	"Qe6",
+	"Bxd7",
+	"Nxd7",
+	"Qb8",
+	"Nxb8",
+	"Rd8#",
+]
 
 
 def main():
@@ -65,10 +104,30 @@ def main():
 	while True:
 		turn = "White" if is_white else "Black"
 		print(f"   {turn}'s turn. Please enter your move.\n")
-		user_input: str = input(">> ").lower()
-		if user_input == 'quit':
+		user_input: str = input(">> ")
+		if user_input.lower() == 'quit':
 			print("\n   thanks for playing!")
 			break
+		if user_input in CASTLE_KINGSIDE_NOTATIONS + CASTLE_QUEENSIDE_NOTATIONS:
+			# hack for castling - doesn't check if castling is a valid move. TODO fix this
+			is_kingside = user_input in CASTLE_KINGSIDE_NOTATIONS
+			king_start_rank = 7 if is_white else 0
+			king_start_file = 4
+			king_end_rank = king_start_rank
+			king_end_file = 6 if is_kingside else 2
+			rook_start_rank = king_start_rank
+			rook_start_file = 7 if is_kingside else 0
+			rook_end_rank = king_start_rank
+			rook_end_file = 5 if is_kingside else 3
+			king_char = WHITE_KING if is_white else BLACK_KING
+			rook_char = WHITE_ROOK if is_white else BLACK_ROOK
+			board[king_start_rank][king_start_file] = ''
+			board[rook_start_rank][rook_start_file] = ''
+			board[king_end_rank][king_end_file] = king_char
+			board[rook_end_rank][rook_end_file] = rook_char
+			draw(board)
+			is_white = not is_white
+			continue
 		processed_input = process_input(
 			board=board,
 			user_input=user_input,
@@ -91,8 +150,7 @@ def main():
 				draw(board)
 				is_white = not is_white
 				continue
-		else:
-			print("   Invalid move")
+		print("   Invalid move")
 
 def starting_board():
 	board = EMPTY_BOARD
@@ -179,12 +237,10 @@ def process_input(
 	user_input : str,
 	is_white: bool,
 ) -> str | None:
-	verbose_notation_regex = r"[pknqrb][a-h][1-8][a-h][1-8]"
+	verbose_notation_regex = r"[PKNQRB][a-h][1-8][a-h][1-8]"
 	pawn_regex = r"[a-h][1-8]"
 	pawn_capture_regex = r"[a-h][x][a-h][1-8]"
-	piece_regex = r"[knqrb][a-h|1-8]?[x]?[a-h][1-8][+#]?"
-	kingside_castle_notations = ["0-0", "o-o", "00", "oo", "castle king side", "castle kingside"]
-	queenside_castle_notations = ["0-0-0", "o-o-o", "000", "ooo", "castle queen side", "castle queenside"]
+	piece_regex = r"[KNQRB][a-h|1-8]?[x]?[a-h][1-8][+#]?"
 	try:
 		if re.fullmatch(verbose_notation_regex, user_input):
 			piece = user_input[0]
@@ -204,14 +260,14 @@ def process_input(
 			assert start_square != end_square
 			return (piece, start_file, start_rank, end_file, end_rank)
 		elif re.fullmatch(pawn_regex, user_input):
-			piece = 'p'
+			piece = 'P'
 			start_file = file_to_index(user_input[0])
 			end_file = start_file
 			end_rank = rank_to_index(user_input[1])
 			pawn = WHITE_PAWN if is_white else BLACK_PAWN
 			start_ranks = []
 			for i in range(1,7):
-				print(f"file={end_file}, rank={i}, piece={board[i][end_file]}")
+				# print(f"file={end_file}, rank={i}, piece={board[i][end_file]}")
 				if board[i][end_file] == pawn:
 					start_ranks.append(i)
 			assert len(start_ranks) != 0, f"there are no pawns in that file"
@@ -219,7 +275,7 @@ def process_input(
 			start_rank = start_ranks[0]
 			return (piece, start_file, start_rank, end_file, end_rank)
 		elif re.fullmatch(pawn_capture_regex, user_input):
-			piece = 'p'
+			piece = 'P'
 			start_file = file_to_index(user_input[0])
 			end_file = file_to_index(user_input[2])
 			end_rank = rank_to_index(user_input[3])
@@ -227,15 +283,13 @@ def process_input(
 			forward = -1 if is_white else 1
 			start_rank = -1
 			for i in range(1,7):
-				print(f"file={start_file}, rank={i}, end_rank={end_rank} piece={board[i][end_file]}")
+				#print(f"file={start_file}, rank={i}, end_rank={end_rank} piece={board[i][end_file]}")
 				if board[i][start_file] == pawn and i + forward == end_rank:
 					start_rank = i
 			assert start_rank >= 0, f"there are no pawns in that position"
 			return (piece, start_file, start_rank, end_file, end_rank)
 		elif re.fullmatch(piece_regex, user_input):
 			#print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
-
-			piece_regex = r"[knqrb][a-h|1-8]?[x]?[a-h][1-8][+#]?"
 			piece = user_input[0]
 			piece_char = get_piece_char(piece, is_white)
 			offset = 0
@@ -257,14 +311,6 @@ def process_input(
 				return (piece, start_file, start_rank, end_file, end_rank)
 			else:
 				return None
-			# todo - pieces
-			return None
-		elif user_input in kingside_castle_notations:
-			# todo castling
-			return None
-		elif user_input in queenside_castle_notations:
-			# todo castling
-			return None
 		else:
 			return None
 	except AssertionError as e:
@@ -296,7 +342,7 @@ def is_valid(
 		end_piece = board[end_rank][end_file]
 		assert end_piece not in friendly_pieces, "cannot move there, one of your pieces is in the way"
 		is_end_empty = not end_piece
-		if piece == 'p':
+		if piece == 'P':
 			forward = -1 if is_white else 1
 			is_first_move = start_rank == (6 if is_white else 1)
 			if is_end_empty:
@@ -313,14 +359,15 @@ def is_valid(
 				assert (end_file == start_file + 1 or end_file == start_file - 1), "pawns can only capture diagonally"
 				assert (end_rank == start_rank + forward), "pawns can only move forward"
 				return True
-		elif piece == 'k':
+		elif piece == 'K':
 			assert abs(start_file - end_file) <= 1 and abs(start_rank - end_rank) <= 1, "king can only move one square in any direction"
 			return True
-		elif piece == 'n':
+		elif piece == 'N':
+			# print(f"start_file={start_file}, start_rank={start_rank}, end_file={end_file}, end_rank={end_rank}")
 			assert abs(start_file - end_file) <= 2 and abs(start_rank - end_rank) <= 2, "knights cannot move that far"
 			assert abs(start_file - end_file) + abs(start_rank - end_rank) == 3, "knights must move in an L shape"
 			return True
-		elif piece == 'b':
+		elif piece == 'B':
 			assert abs(start_file - end_file) == abs(start_rank - end_rank), "bishops can only move diagonally"
 			distance = abs(start_file - end_file)
 			direction_horizontal = int((end_file - start_file) / abs(end_file - start_file))
@@ -328,7 +375,7 @@ def is_valid(
 			for i in range(1, distance):
 				assert not board[start_rank + i * direction_vertical][start_file + i * direction_horizontal], "cannot move there, a piece is in the way"
 			return True
-		elif piece == 'r':
+		elif piece == 'R':
 			assert (start_file == end_file and start_rank != end_rank) or (start_rank == end_rank and start_file != end_file), "rooks can only move horizontally or vertically"
 			distance_horizontal = end_file - start_file
 			direction_horizontal = 0 if distance_horizontal == 0 else int(distance_horizontal / abs(end_file - start_file))
@@ -339,7 +386,7 @@ def is_valid(
 				piece = board[start_rank + i * direction_vertical][start_file + i * direction_horizontal]
 				assert not piece, "cannot move there, a piece is in the way"
 			return True
-		elif piece == 'q':
+		elif piece == 'Q':
 			# move like a bishop
 			if abs(start_file - end_file) == abs(start_rank - end_rank):
 				distance = abs(start_file - end_file)
@@ -376,17 +423,17 @@ def is_valid(
 		
 			
 def get_piece_char(piece: str, is_white: bool) -> str:
-	if piece == 'p':
+	if piece == 'P':
 		return WHITE_PAWN if is_white else BLACK_PAWN
-	elif piece == 'k':
+	elif piece == 'K':
 		return WHITE_KING if is_white else BLACK_KING
-	elif piece == 'n':
+	elif piece == 'N':
 		return WHITE_KNIGHT if is_white else BLACK_KNIGHT
-	elif piece == 'b':
+	elif piece == 'B':
 		return WHITE_BISHOP if is_white else BLACK_BISHOP
-	elif piece == 'r':
+	elif piece == 'R':
 		return WHITE_ROOK if is_white else BLACK_ROOK
-	elif piece == 'q':
+	elif piece == 'Q':
 		return WHITE_QUEEN if is_white else BLACK_QUEEN
 	return piece
 
