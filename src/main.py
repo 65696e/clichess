@@ -241,8 +241,6 @@ def is_valid(
 				return True
 			else:
 				assert False, "queen can only move horizontally or diagonally"
-			
-			return True
 		assert False, "unhandled exception"
 	except AssertionError as e:
 		error_msg = str(e)

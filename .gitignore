@@ -1,1 +1,17 @@
+# .gitignore
+
+# Byte-compiled files
+__pycache__/
+*.py[cod]
+
+# Build and distribution directories
+build/
+dist/
+*.egg-info/
+
+# Virtual environments (if any)
+venv/
+.env/
+
+# grrr
 .DS_Store
