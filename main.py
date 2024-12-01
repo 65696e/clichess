@@ -21,14 +21,34 @@ BLACK_PIECES = [BLACK_KING, BLACK_QUEEN, BLACK_BISHOP, BLACK_KNIGHT, BLACK_ROOK,
 def main():
 	print("welcome to clichess")
 	input("press enter to start")
+	is_white: bool = True
 	board: list[list[str]] = starting_board()
+	draw(board)
 	while True:
-		draw(board)
 		user_input: str = input(">> ")
 		if user_input.lower() == 'quit':
 			print("bye!")
 			break
-		board = process_input(board=board, user_input=user_input)
+		processed_input = process_input(user_input=user_input)
+		if processed_input:
+			(piece, start_file, start_rank, end_file, end_rank) = processed_input
+			is_valid_move: bool = is_valid(
+				board=board,
+				is_white=is_white,
+				piece=piece,
+				start_file=start_file,
+				start_rank=start_rank,
+				end_file=end_file,
+				end_rank=end_rank,
+			)
+			if is_valid_move:
+				board[start_rank][start_file] = ''
+				board[end_rank][end_file] = get_piece_char(piece, is_white=is_white)
+				draw(board)
+				is_white = not is_white
+				continue
+		print("Please try again")
+
 
 def starting_board():
 	board = EMPTY_BOARD
@@ -111,62 +131,62 @@ def draw(
 	print(output)
 
 def process_input(
-	board,
 	user_input : str,
 ) -> str:
-	piece = user_input[0].upper()
+	try:
+		piece = user_input[0].upper()
 
-	start_square = user_input[1:3]
-	start_file = ord(start_square[0]) - ord('a')
-	assert start_file >= 0 and start_file < 8
-	start_rank = 7 - (int(start_square[1]) - 1)
-	assert start_rank >= 0 and start_rank < 8
+		start_square = user_input[1:3]
+		start_file = ord(start_square[0]) - ord('a')
+		assert start_file >= 0 and start_file < 8
+		start_rank = 7 - (int(start_square[1]) - 1)
+		assert start_rank >= 0 and start_rank < 8
 
-	end_square = user_input[3:5]
-	end_file = ord(end_square[0]) - ord('a')
-	assert end_file >= 0 and start_file < 8
-	end_rank = 7 - (int(end_square[1]) - 1)
-	assert end_rank >= 0 and end_rank < 8
+		end_square = user_input[3:5]
+		end_file = ord(end_square[0]) - ord('a')
+		assert end_file >= 0 and start_file < 8
+		end_rank = 7 - (int(end_square[1]) - 1)
+		assert end_rank >= 0 and end_rank < 8
 
-	assert start_square != end_square
-
-	is_valid_move: bool = is_valid(
-		board=board,
-		piece=piece,
-		start_file=start_file,
-		start_rank=start_rank,
-		end_file=end_file,
-		end_rank=end_rank,
-	)
-	if is_valid_move:
-		board[start_rank][start_file] = ''
-		board[end_rank][end_file] = get_piece_char(piece, is_white=True)
-	else:
-		print("Invalid move.")
-	return board
+		assert start_square != end_square
+		return (piece, start_file, start_rank, end_file, end_rank)
+	except AssertionError as e:
+		error_msg = str(e)
+		print(f"Error - {error_msg if error_msg else 'unknown assertion exception'}")
+		return None
+	except IndexError as e:
+		error_msg = str(e)
+		print(f"Error - {error_msg if error_msg else 'unknown index exception'}")
+		return None
 
 
 def is_valid(
 	board: list[list[str]],
+	is_white: bool,
 	piece: str,
 	start_file: int,
 	start_rank: int,
 	end_file: int,
 	end_rank: int,
 ) -> bool:
-	print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
 	try:
+		print(f"piece={piece}, start_rank={start_rank},start_file={start_file} end_rank={end_rank},end_file={end_file}")
+		friendly_pieces = WHITE_PIECES if is_white else BLACK_PIECES
+		start_piece = board[start_rank][start_file]
+		assert start_piece, "there is not a piece at your starting square"
+		assert start_piece in friendly_pieces, "the piece at your starting square does not belong to you"
 		end_piece = board[end_rank][end_file]
-		assert end_piece not in WHITE_PIECES, "cannot move there, a piece is in the way"
+		assert end_piece not in friendly_pieces, "cannot move there, one of your pieces is in the way"
 		is_end_empty = not end_piece
 		if piece == 'P':
-			forward = -1
+			forward = -1 if is_white else 1
+			is_first_move = start_rank == (6 if is_white else 1)
 			if is_end_empty:
 				assert start_file == end_file, "pawns must move vertically, unless capturing"
 				if end_rank == start_rank + forward:
 					return True
-				elif end_rank == start_rank + 2 * forward and start_rank == 6:
-					is_path_empty = not board[end_rank + forward][end_file]
+				elif end_rank == start_rank + 2 * forward and is_first_move:
+					is_path_empty = not board[start_rank + forward][end_file]
 					assert is_path_empty, "the pawn's path is blocked"
 					return True
 				else:
@@ -226,7 +246,11 @@ def is_valid(
 		assert False, "unhandled exception"
 	except AssertionError as e:
 		error_msg = str(e)
-		print(f"Error - {error_msg if error_msg else 'unknown exception'}")
+		print(f"Error - {error_msg if error_msg else 'unknown assertion exception'}")
+		return False
+	except IndexError as e:
+		error_msg = str(e)
+		print(f"Error - {error_msg if error_msg else 'unknown index exception'}")
 		return False
 
 		
