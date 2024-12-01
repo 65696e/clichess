@@ -67,7 +67,11 @@ def main():
 		if user_input.lower() == 'quit':
 			print("\n   thanks for playing!")
 			break
-		processed_input = process_input(user_input=user_input)
+		processed_input = process_input(
+			board=board,
+			user_input=user_input,
+			is_white=is_white,
+		)
 		if processed_input:
 			(piece, start_file, start_rank, end_file, end_rank) = processed_input
 			is_valid_move: bool = is_valid(
@@ -86,7 +90,7 @@ def main():
 				is_white = not is_white
 				continue
 		else:
-			print("Could not process")
+			print("   Invalid move")
 
 def starting_board():
 	board = EMPTY_BOARD
@@ -169,33 +173,65 @@ def draw(
 	print(output)
 
 def process_input(
+	board: list[list[str]],
 	user_input : str,
+	is_white: bool,
 ) -> str | None:
 	verbose_notation_regex = r"[pknqrb][a-h][1-8][a-h][1-8]"
 	pawn_regex = r"[a-h][1-8]"
-	pawn_capture_regex = r"[a-h][x]?[a-h][1-8]?"
+	pawn_capture_regex = r"[a-h][x][a-h][1-8]"
 	piece_regex = r"[knqrb][a-h|1-8]?[x]?[a-h][1-8][+#]?"
 	kingside_castle_notations = ["0-0", "o-o", "00", "oo", "castle king side", "castle kingside"]
 	queenside_castle_notations = ["0-0-0", "o-o-o", "000", "ooo", "castle queen side", "castle queenside"]
-	if not re.fullmatch(verbose_notation_regex, user_input):
-		return None
 	try:
-		piece = user_input[0].upper()
+		if re.fullmatch(verbose_notation_regex, user_input):
+			piece = user_input[0].upper()
 
-		start_square = user_input[1:3]
-		start_file = ord(start_square[0]) - ord('a')
-		assert start_file >= 0 and start_file < 8
-		start_rank = 7 - (int(start_square[1]) - 1)
-		assert start_rank >= 0 and start_rank < 8
+			start_square = user_input[1:3]
+			start_file = file_to_index(start_square[0])
+			assert start_file >= 0 and start_file < 8
+			start_rank = rank_to_index(start_square[1])
+			assert start_rank >= 0 and start_rank < 8
 
-		end_square = user_input[3:5]
-		end_file = ord(end_square[0]) - ord('a')
-		assert end_file >= 0 and start_file < 8
-		end_rank = 7 - (int(end_square[1]) - 1)
-		assert end_rank >= 0 and end_rank < 8
+			end_square = user_input[3:5]
+			end_file = file_to_index(end_square[0])
+			assert end_file >= 0 and start_file < 8
+			end_rank = rank_to_index(end_square[1])
+			assert end_rank >= 0 and end_rank < 8
 
-		assert start_square != end_square
-		return (piece, start_file, start_rank, end_file, end_rank)
+			assert start_square != end_square
+			return (piece, start_file, start_rank, end_file, end_rank)
+		elif re.fullmatch(pawn_regex, user_input):
+			piece = 'P'
+			start_file = file_to_index(user_input[0])
+			end_file = start_file
+			end_rank = rank_to_index(user_input[1])
+			pawn = WHITE_PAWN if is_white else BLACK_PAWN
+			start_ranks = []
+			for i in range(1,7):
+				print(f"file={end_file}, rank={i}, piece={board[i][end_file]}")
+				if board[i][end_file] == pawn:
+					start_ranks.append(i)
+			assert len(start_ranks) != 0, f"there are no pawns in that file"
+			assert len(start_ranks) == 1, f"there are multiple pawns in that file. please specify which pawn you want to move (e.g. e4e5 means move the pawn on e4 to e5)"
+			start_rank = start_ranks[0]
+			return (piece, start_file, start_rank, end_file, end_rank)
+		elif re.fullmatch(pawn_capture_regex, user_input):
+			piece = 'P'
+			start_file = file_to_index(user_input[0])
+			end_file = file_to_index(user_input[2])
+			end_rank = rank_to_index(user_input[3])
+			pawn = WHITE_PAWN if is_white else BLACK_PAWN
+			forward = -1 if is_white else 1
+			start_rank = ''
+			for i in range(1,7):
+				print(f"file={start_file}, rank={i}, end_rank={end_rank} piece={board[i][end_file]}")
+				if board[i][start_file] == pawn and i + forward == end_rank:
+					start_rank = i
+			assert start_rank, f"there are no pawns in that position"
+			return (piece, start_file, start_rank, end_file, end_rank)
+		else:
+			return None
 	except AssertionError as e:
 		error_msg = str(e)
 		print(f"   Error - {error_msg if error_msg else 'unknown assertion exception'}")
@@ -315,7 +351,17 @@ def get_piece_char(piece: str, is_white: bool) -> str:
 	elif piece == 'Q':
 		return WHITE_QUEEN if is_white else BLACK_QUEEN
 	return piece
-			
+
+# converts the file to the corresponding index in a 2d array
+# e.g. 'a' -> 0
+def file_to_index(file: str) -> int:
+	return ord(file) - ord('a')
+
+# converts the rank to the corresponding index in a 2d array
+# e.g. '1' -> 7
+# remember the top of the board corresponds to the bottom of the array, so rank 1 is the 7th row in the array
+def rank_to_index(rank: str) -> int:
+	return 7 - (int(rank) - 1)
 
 if __name__ == "__main__":
     main()
