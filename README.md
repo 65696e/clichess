@@ -1,8 +1,8 @@
 # clichess
 
-###### command-line-interace for chess
+#### command-line-interace for chess
 
-### installation
+## installation
 
 Run `pip install .` inside the clichess directory. Then, type `clichess` to run.
 
